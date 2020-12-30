@@ -16,6 +16,13 @@ return [
     'key' => env('DISCOURSE_KEY'),
 
     /**
+     * Discourse Username
+     *
+     * The username used when creating the API Key, recommendation is Discobot
+     */
+    'username' => env('DISCOURSE_USERNAME'),
+
+    /**
      * Discourse Category ID to create threads in.
      */
     'category_id' => env('DISCOURSE_CATEGORY_ID'),

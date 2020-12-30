@@ -28,9 +28,7 @@ class Fider
         $postId = $post['number'];
 
         $content .= $this->getPostDetails($postId);
-        $content .= $this->getPostComments(51);
-
-        dd($content);
+        $content .= $this->getPostComments($postId);
 
         return [
             'title' => $title,
@@ -40,33 +38,72 @@ class Fider
 
     private function getPostDetails($postId)
     {
-        $details = Http::withToken($this->apiKey)
+        $response = Http::withToken($this->apiKey)
                         ->get("{$this->baseUrl}/api/v1/posts/{$postId}");
 
-        if ($details->failed()) {
+        if ($response->failed()) {
             return null;
         }
 
-        $json = $details->json();
+        $json = $response->json();
 
-        return "\n\n This petition was posted by {$json['user']['name']}.\n\nIt had {$json['votesCount']} votes.";
+        $content = "\n\n --- \n\n**Author**: {$json['user']['name']}";
+
+        $content .= "\n\n**Vote count**: {$json['votesCount']}";
+
+        $content .= "\n\n**Status**: {$json['status']}";
+
+        // Had a response from an admin
+        if (isset($json['response'])) {
+            $content .= "\n\n[quote]\n {$json['response']['text']} \n\n ~ posted by {$json['response']['user']['name']} \n[/quote]\n";
+        }
+
+        // It has tags
+        if (count($json['tags']) > 0) {
+            $content .= "\n\n**Tags**: \n\n";
+            // Loop over tags
+            foreach ($json['tags'] as $tag) {
+                $content .= "* {$tag} \n";
+            }
+        }
+
+        return $content;
     }
 
     private function getPostComments($postId)
     {
-        $comments = Http::withToken($this->apiKey)
+        $response = Http::withToken($this->apiKey)
             ->get("{$this->baseUrl}/api/v1/posts/{$postId}/comments");
 
-        if ($comments->failed()) {
+        if ($response->failed()) {
             return null;
         }
 
-        $json = $comments->json();
+        $comments = $response->json();
 
+        $content = "\n\n --- \n\n";
 
-        // Loop over the comments and add them to the base raw
+        $content .= "\n\n **Comments** \n\n";
 
-        dd($json);
+        // It has comments
+        if (count($comments) > 0) {
+            // Loop over the comments and add them to the base raw
+            foreach ($comments as $comment) {
+
+                $author = $comment['user']['name'];
+
+                if (!$author) {
+                    // Check for Anonymous comments
+                    $author = 'a ClassicPress Supporter';
+                }
+
+                $content .= "[quote]\n {$comment['content']} \n\n ~ posted by {$author} \n[/quote]\n";
+            }
+
+            return $content;
+        }
+
+        return "\n\n No comments posted.";
     }
 
 

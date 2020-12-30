@@ -33,6 +33,11 @@ class ImportFiderToDiscourse extends Command
     private $firstRequestTime = null;
 
     /**
+     * Error Tracking
+     */
+    private $postId;
+
+    /**
      * Execute the console command.
      *
      * @return mixed
@@ -69,9 +74,10 @@ class ImportFiderToDiscourse extends Command
 
         // Loop over the collection and create Discourse threads for each post
         $this->withProgressBar($posts, function ($post) {
+            $this->postId = $post['id'];
             // Actually create the Discourse Post
-            $fiderPost = $this->getFiderPost($post);
-            $this->createDiscoursePost($fiderPost);
+            $fiderData = $this->getFiderPost($post);
+            $this->createDiscoursePost($fiderData);
         });
 
         // Let the user know we finished
@@ -86,7 +92,7 @@ class ImportFiderToDiscourse extends Command
         return $fider->getPostData($post);
     }
 
-    private function createDiscoursePost($post)
+    private function createDiscoursePost($postData)
     {
         // Discourse has a rate limit of 20 API requests
         // per minute so we will throttle the creates
@@ -102,6 +108,10 @@ class ImportFiderToDiscourse extends Command
 
         $this->requestCount++;
 
-        app(Discourse::class)->test();
+        $successful = app(Discourse::class)->createPost($postData);
+
+        if (!$successful) {
+            $this->warn("Failed to create post id {$this->postId}");
+        }
     }
 }
